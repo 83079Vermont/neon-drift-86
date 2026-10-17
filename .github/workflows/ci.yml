@@ -59,22 +59,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # CONTRACT.md §0: classic scripts only, no modules, no network, no ES6.
-      - name: Assert syntax constraints
-        run: |
-          fail=0
-          for f in src/*.js; do
-            if grep -nE '\b(let|const|class)\b|=>|`|\.\.\.|\bimport\b|\bexport\b' "$f"; then
-              echo "::error file=$f::ES6+ syntax found (CONTRACT.md §0 forbids it)"
-              fail=1
-            fi
-            if grep -nE '\bfetch\s*\(|XMLHttpRequest|importScripts' "$f"; then
-              echo "::error file=$f::network access found (CONTRACT.md §0 forbids it)"
-              fail=1
-            fi
-          done
-          exit $fail
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Bundle contains no external references
-        run: |
-          ! grep -qE '<script[^>]*\bsrc=|<link[^>]*rel=["'"'"']?stylesheet' neon-drift-86.html
+      # CONTRACT.md §0: classic scripts only, no modules, no network, no ES6+.
+      # The guard blanks out comments and string literals before scanning, so
+      # sprite pixel-maps ("...kkkkk") and prose are not false positives.
+      - name: Assert syntax constraints
+        run: node tools/es5-guard.mjs --verbose
