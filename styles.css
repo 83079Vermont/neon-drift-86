@@ -1,0 +1,245 @@
+/* ==========================================================================
+   NEON DRIFT '86 — page chrome
+   The game itself draws every gameplay pixel into #screen; this file only
+   styles the arcade cabinet around it. No external fonts, no images.
+   ========================================================================== */
+
+:root {
+  --ink:        #f4f0ff;
+  --dim:        #7d76a8;
+  --neon-pink:  #ff2fb9;
+  --neon-cyan:  #22e0ff;
+  --neon-amber: #ffc46b;
+  --cab-metal:  #16121f;
+  --cab-edge:   #2b2440;
+  --cab-black:  #07060d;
+  --mono: "Consolas", "DejaVu Sans Mono", "Courier New", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--cab-black);
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: var(--ink);
+  font-family: var(--mono);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+  -webkit-tap-highlight-color: transparent;
+  /* the arcade floor: a faint perspective grid that fades out */
+  background-image:
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 47, 185, 0.13), transparent 60%),
+    radial-gradient(ellipse 100% 70% at 50% 110%, rgba(34, 224, 255, 0.10), transparent 62%),
+    linear-gradient(transparent 0 96%, rgba(34, 224, 255, 0.08) 96% 100%),
+    linear-gradient(90deg, transparent 0 96%, rgba(255, 47, 185, 0.06) 96% 100%);
+  background-size: auto, auto, 26px 26px, 26px 26px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.cabinet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-height: 100%;
+}
+
+/* ----------------------------------------------------------------- marquee */
+
+.marquee { text-align: center; margin: 0; }
+
+.marquee-main {
+  margin: 0;
+  font-size: clamp(15px, 3.2vh, 30px);
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  color: var(--neon-pink);
+  text-shadow:
+     0 0 4px rgba(255, 47, 185, 0.9),
+     0 0 18px rgba(255, 47, 185, 0.55),
+     2px 2px 0 #4a0033;
+}
+
+.marquee-year { color: var(--neon-cyan); text-shadow: 0 0 4px rgba(34,224,255,.9), 0 0 18px rgba(34,224,255,.5); }
+
+.marquee-sub {
+  margin: 4px 0 0;
+  font-size: clamp(7px, 1.25vh, 11px);
+  letter-spacing: 0.34em;
+  color: var(--dim);
+}
+
+/* ------------------------------------------------------------------ screen */
+
+.screen-frame {
+  position: relative;
+  line-height: 0;
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #241d33, var(--cab-metal) 45%, #0d0a15);
+  border: 1px solid var(--cab-edge);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.85),
+    0 18px 44px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+#screen {
+  display: block;
+  background: #000;
+  border-radius: 5px;
+  outline: none;
+  cursor: none;
+  touch-action: none;
+  /* the canvas is integer-upscaled by GAME; keep every pixel crisp */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 26px rgba(34, 224, 255, 0.16),
+    0 0 60px rgba(255, 47, 185, 0.12);
+}
+
+#screen:focus-visible { box-shadow: 0 0 0 2px var(--neon-cyan), 0 0 26px rgba(34, 224, 255, 0.3); }
+
+/* ---------------------------------------------------------------------------
+   CRT aperture grille + dome glare.
+
+   IMPORTANT: the scanlines live HERE, in CSS at *output* resolution — not in
+   the 384x216 canvas. Baked into the backbuffer they get integer-multiplied
+   into 3-5px stripes and crush the whole image; as a CSS overlay they stay a
+   crisp 1px regardless of upscale factor, and cost the renderer nothing.
+   `.glass` sits exactly over the canvas (same inset as the frame padding) and
+   never intercepts pointer events.
+   --------------------------------------------------------------------------- */
+.glass {
+  position: absolute;
+  inset: 10px;
+  border-radius: 5px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 42% at 30% 4%, rgba(255, 255, 255, 0.05), transparent 70%),
+    radial-gradient(ellipse 125% 105% at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.30) 100%);
+}
+
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  /* 1 dark row in every 3 — subtle enough to keep the neon readable */
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.20) 0 1px,
+    rgba(0, 0, 0, 0) 1px 3px
+  );
+  /* a whisper of horizontal phosphor mask so it reads as glass, not stripes */
+  background-blend-mode: normal;
+}
+
+@media (min-resolution: 2dppx) {
+  /* on hidpi a 3px period is sub-pixel-ish; widen slightly so it still reads */
+  .glass::after {
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.18) 0 1px,
+      rgba(0, 0, 0, 0) 1px 4px
+    );
+  }
+}
+
+/* ------------------------------------------------------------------ splash */
+
+.splash {
+  position: absolute;
+  inset: 10px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #05040a;
+  color: var(--neon-amber);
+  font-size: clamp(9px, 1.7vh, 15px);
+  letter-spacing: 0.24em;
+  line-height: 1.6;
+  transition: opacity 0.28s ease;
+  z-index: 2;
+}
+
+.splash.hidden { opacity: 0; pointer-events: none; }
+.splash.error { color: #ff6060; }
+.splash.error .splash-sub { font-size: 0.72em; letter-spacing: 0.1em; max-width: 80%; text-align: center; }
+
+.splash-title { text-shadow: 0 0 10px rgba(255, 196, 107, 0.75); }
+.splash-sub { font-size: 0.74em; color: var(--dim); letter-spacing: 0.18em; }
+
+/* ---------------------------------------------------------------- controls */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  max-width: 760px;
+  font-size: clamp(7px, 1.2vh, 11px);
+  color: var(--dim);
+}
+
+.ctrl { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+
+kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 2px 4px;
+  border: 1px solid #3a3157;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #1c1730;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.94em;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.ctrl span { color: #9c94c4; }
+
+.footnote {
+  margin: 0;
+  max-width: 760px;
+  text-align: center;
+  font-size: clamp(6.5px, 1.05vh, 10px);
+  line-height: 1.7;
+  color: #5b5580;
+  letter-spacing: 0.06em;
+}
+
+/* very short viewports: drop the chrome so the cabinet always fits */
+@media (max-height: 520px) {
+  .marquee-sub, .footnote { display: none; }
+  .cabinet { gap: 6px; }
+}
+
+@media (max-width: 560px) {
+  .footnote { display: none; }
+  .controls { gap: 4px 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash { transition: none; }
+}

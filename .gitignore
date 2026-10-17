@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# NEON DRIFT '86 — ignore rules
+# ---------------------------------------------------------------------------
+
+# Agent / authoring scratch (regenerated, never part of the project)
+.scratch/
+.probe/
+.omni-workstation/
+
+# Verification artefacts.  `tools/run-all.mjs` regenerates all of these, so
+# they are not tracked — only the human-written report is.
+.verify/_*
+.verify/tmp-*
+.verify/frames/
+.verify/*.log
+.verify/contract-test.json
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="NEON DRIFT '86 — 纯 HTML5 复古街机赛车，零外部资源，可直接双击运行。">
+<title>NEON DRIFT '86 — 复古街机赛车</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="cabinet">
+
+  <header class="marquee">
+    <h1 class="marquee-main">NEON&nbsp;DRIFT&nbsp;<span class="marquee-year">'86</span></h1>
+    <p class="marquee-sub">RETRO ARCADE RACER &middot; 384 PIXELS OF PURE ATTITUDE</p>
+  </header>
+
+  <div class="screen-frame">
+    <canvas id="screen" width="384" height="216" tabindex="0"
+            aria-label="NEON DRIFT 86 游戏画面"></canvas>
+
+    <!-- Error surface only.  GAME.boot() is synchronous, so nothing can paint
+         between DOMContentLoaded and the first frame — an "loading" splash here
+         would either never be seen or would stack on top of the game's own
+         SYSTEM BOOT screen.  It stays hidden unless boot actually throws. -->
+    <div id="splash" class="splash hidden" role="alert" aria-live="assertive"></div>
+
+    <div class="glass" aria-hidden="true"></div>
+  </div>
+
+  <section class="controls" aria-label="操作说明">
+    <div class="ctrl"><kbd>↑</kbd><kbd>W</kbd><span>油门</span></div>
+    <div class="ctrl"><kbd>↓</kbd><kbd>S</kbd><span>刹车</span></div>
+    <div class="ctrl"><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd><span>转向</span></div>
+    <div class="ctrl"><kbd>Space</kbd><span>手刹漂移</span></div>
+    <div class="ctrl"><kbd>Enter</kbd><span>开始 / 确认</span></div>
+    <div class="ctrl"><kbd>Esc</kbd><span>暂停</span></div>
+    <div class="ctrl"><kbd>M</kbd><span>静音</span></div>
+    <div class="ctrl"><kbd>F</kbd><span>帧率</span></div>
+  </section>
+
+  <p class="footnote">
+    手柄与触屏同样可用 &middot; 所有图形与音乐均由代码实时生成，无任何外部素材 &middot; 最高分保存在本机
+  </p>
+
+</div>
+
+<!-- =====================================================================
+     Load order is FROZEN by CONTRACT.md:
+       core -> road -> sprites -> audio -> render -> input -> game
+     Classic scripts (no ES modules) so the game also runs from file://
+     ===================================================================== -->
+<script src="src/core.js"></script>
+<script src="src/road.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/render.js"></script>
+<script src="src/input.js"></script>
+<script src="src/game.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var splash = document.getElementById('splash');
+  var canvas = document.getElementById('screen');
+
+  function fail(msg) {
+    if (!splash) { return; }
+    splash.classList.remove('hidden');
+    splash.classList.add('error');
+    splash.innerHTML = '';
+    var t = document.createElement('div');
+    t.className = 'splash-title';
+    t.textContent = 'ERROR';
+    var s = document.createElement('div');
+    s.className = 'splash-sub';
+    s.textContent = msg;
+    splash.appendChild(t);
+    splash.appendChild(s);
+  }
+
+  /* --- audio can only start after a real user gesture ------------------- */
+  function unlockAudio() {
+    try {
+      if (typeof AUDIO !== 'undefined' && AUDIO.unlock) { AUDIO.unlock(); }
+    } catch (e) { /* audio is strictly optional */ }
+  }
+  window.addEventListener('keydown', unlockAudio);
+  window.addEventListener('pointerdown', unlockAudio);
+  window.addEventListener('touchstart', unlockAudio, { passive: true });
+
+  /* --- the page should never scroll or bounce on a game surface --------- */
+  window.addEventListener('touchmove', function (e) {
+    if (e.target === canvas) { e.preventDefault(); }
+  }, { passive: false });
+  canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  function boot() {
+    try {
+      if (typeof GAME === 'undefined' || !GAME.boot) {
+        fail('GAME NOT LOADED');
+        return;
+      }
+      GAME.boot(canvas);
+      canvas.focus();
+    } catch (e) {
+      fail(String((e && e.message) || e));
+      if (window.console && console.error) { console.error(e); }
+    }
+  }
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(boot, 0);
+  } else {
+    window.addEventListener('DOMContentLoaded', boot);
+  }
+})();
+</script>
+
+</body>
+</html>

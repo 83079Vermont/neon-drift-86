@@ -1,0 +1,80 @@
+name: ci
+
+# The whole test suite is dependency-free: tools/*.mjs use nothing but Node
+# built-ins, and the "headless browser" is a Canvas2D implementation we ship in
+# tools/canvas-shim.mjs.  So CI needs no install step at all.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: build + 61 assertions + 12 rendered frames
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 1. The committed single-file bundle must match the current sources.
+      - name: Rebuild single-file bundle
+        run: node tools/build.mjs
+
+      - name: Bundle must be up to date and self-contained
+        run: |
+          node tools/build.mjs --check
+          if ! git diff --quiet -- neon-drift-86.html; then
+            echo "::error::neon-drift-86.html is stale — run 'node tools/build.mjs' and commit the result."
+            git diff --stat -- neon-drift-86.html
+            exit 1
+          fi
+
+      # 2. Contract assertions (includes a 10800-frame soak) + frame export.
+      - name: Run contract tests and render frames
+        run: node tools/run-all.mjs
+
+      - name: Upload rendered frames
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frames
+          path: |
+            .verify/frames/
+            .verify/contract-test.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  es5-guard:
+    name: sources stay ES5 / offline / file:// friendly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # CONTRACT.md §0: classic scripts only, no modules, no network, no ES6.
+      - name: Assert syntax constraints
+        run: |
+          fail=0
+          for f in src/*.js; do
+            if grep -nE '\b(let|const|class)\b|=>|`|\.\.\.|\bimport\b|\bexport\b' "$f"; then
+              echo "::error file=$f::ES6+ syntax found (CONTRACT.md §0 forbids it)"
+              fail=1
+            fi
+            if grep -nE '\bfetch\s*\(|XMLHttpRequest|importScripts' "$f"; then
+              echo "::error file=$f::network access found (CONTRACT.md §0 forbids it)"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Bundle contains no external references
+        run: |
+          ! grep -qE '<script[^>]*\bsrc=|<link[^>]*rel=["'"'"']?stylesheet' neon-drift-86.html

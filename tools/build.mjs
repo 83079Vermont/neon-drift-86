@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+/* ==========================================================================
+ * NEON DRIFT '86 — tools/build.mjs
+ *
+ * Inlines every <link rel="stylesheet"> and <script src> of index.html into a
+ * single self-contained file, so the whole game can be shipped as one HTML
+ * document that runs from file:// with zero requests.
+ *
+ *   node tools/build.mjs            -> writes neon-drift-86.html
+ *   node tools/build.mjs --check    -> verifies the bundle has no external refs
+ *
+ * Owner: lead.  No third-party dependencies.
+ * ========================================================================== */
+
+import { readFileSync, writeFileSync, statSync } from 'node:fs';
+import { dirname, resolve, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(HERE, '..');
+const ENTRY = resolve(ROOT, 'index.html');
+const OUT = resolve(ROOT, 'neon-drift-86.html');
+
+const LOCAL = (p) => resolve(ROOT, p);
+const kb = (n) => (n / 1024).toFixed(1) + ' kB';
+
+/** Iterate over <link rel=stylesheet href> and <script src> in document order. */
+function* externalRefs(html) {
+  const re = /<link\b[^>]*\brel=["']?stylesheet["']?[^>]*>|<script\b[^>]*\bsrc=["'][^"']+["'][^>]*>\s*<\/script>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const tag = m[0];
+    if (/^<link/i.test(tag)) {
+      const href = /\bhref=["']([^"']+)["']/i.exec(tag);
+      if (href) yield { kind: 'css', index: m.index, length: tag.length, path: href[1] };
+    } else {
+      const src = /\bsrc=["']([^"']+)["']/i.exec(tag);
+      if (src) yield { kind: 'js', index: m.index, length: tag.length, path: src[1] };
+    }
+  }
+}
+
+function esc(s) {
+  // only guard against a literal </script> inside embedded JS/CSS
+  return s.replace(/<\/script/gi, '<\\/script');
+}
+
+function build({ quiet = false } = {}) {
+  let html = readFileSync(ENTRY, 'utf8');
+  const refs = [...externalRefs(html)];
+
+  if (refs.length === 0) throw new Error('index.html references no local css/js — nothing to inline');
+
+  const parts = [];
+  let cursor = 0;
+  let out = '';
+
+  for (const ref of refs) {
+    if (/^[a-z]+:\/\//i.test(ref.path) || ref.path.startsWith('//')) {
+      throw new Error(`refusing to inline a remote asset: ${ref.path}`);
+    }
+    const abs = LOCAL(ref.path);
+    const code = readFileSync(abs, 'utf8');
+
+    out += html.slice(cursor, ref.index);
+    const banner = `\n/* ==== ${ref.path} (${kb(statSync(abs).size)}) ==== */\n`;
+    if (ref.kind === 'css') {
+      out += `<style>${banner}${code}\n</style>`;
+    } else {
+      out += `<script>${banner}${esc(code)}\n</script>`;
+    }
+    cursor = ref.index + ref.length;
+    parts.push({ ...ref, bytes: statSync(abs).size });
+  }
+  out += html.slice(cursor);
+
+  // stamp the build
+  out = out.replace(
+    /<title>([^<]*)<\/title>/i,
+    (_m, t) => `<title>${t}</title>\n<!-- built ${new Date().toISOString()} · single-file bundle · inlined: ${parts.map((p) => p.path).join(', ')} -->`
+  );
+
+  writeFileSync(OUT, out, 'utf8');
+
+  if (!quiet) {
+    console.log(`bundle  ${relative(ROOT, OUT)}`);
+    for (const p of parts) {
+      console.log(`  + ${p.kind.padEnd(3)} ${p.path.padEnd(18)} ${kb(p.bytes).padStart(9)}`);
+    }
+    console.log(`  = ${'total'.padEnd(22)} ${kb(Buffer.byteLength(out, 'utf8')).padStart(9)}`);
+  }
+  return { out, parts };
+}
+
+function check() {
+  const { out } = build({ quiet: true });
+  const problems = [];
+
+  const leftover = [...out.matchAll(/<script\b[^>]*\bsrc=/gi)].length +
+                   [...out.matchAll(/<link\b[^>]*\brel=["']?stylesheet/gi)].length;
+  if (leftover) problems.push(`${leftover} external reference(s) remain`);
+
+  for (const mod of ['CORE', 'ROAD', 'SPRITES', 'AUDIO', 'RENDER', 'INPUT', 'GAME']) {
+    if (!new RegExp(`\\bvar\\s+${mod}\\s*=`).test(out)) problems.push(`global ${mod} not defined in bundle`);
+  }
+  for (const bad of [/\bfetch\s*\(/, /XMLHttpRequest/, /\bimport\s+[\w{*]/, /\bexport\s+(default|const|function|class)/]) {
+    if (bad.test(out)) problems.push(`bundle contains a forbidden construct: ${bad}`);
+  }
+
+  console.log(problems.length ? 'CHECK FAILED' : 'CHECK OK — bundle is fully self-contained');
+  for (const p of problems) console.log('  ! ' + p);
+  return problems.length === 0;
+}
+
+const arg = process.argv[2];
+if (arg === '--check') {
+  process.exit(check() ? 0 : 1);
+} else {
+  build();
+}
