@@ -24,7 +24,7 @@
 > - 浏览器打开 `index.html`，窗口 1920×1080 —— 期望 canvas 为 1536×864（整数 4 倍放大）
 >
 > 需要说明的是：本项目的**原始需求只有一句话**（“制作一个 HTML5 的复古风格单机赛车游戏”），
-> 上表中的验证结论均来自该项目自带的测试套件，可自行复跑核对。
+> 上面列出的验证结论均来自该项目自带的测试套件，可自行复跑核对。
 >
 > *This repository is a showcase for evaluating **DeepSeek V4.1 Flash (1017)**: every line of it,
 > including the headless Canvas2D verification harness, was produced by the model in a single
