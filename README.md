@@ -7,6 +7,29 @@
 > 一个纯 HTML5 的**复古街机赛车游戏**。伪 3D 路面、程序化像素美术、芯片音乐合成——
 > **零外部素材、零网络请求**，双击一个 HTML 文件就能玩。
 
+> [!NOTE]
+> ### 这是一个用于测试 DeepSeek V4.1 Flash（1017）模型能力的项目
+>
+> 本仓库的全部内容 —— 游戏设计、7 个 ES5 模块、程序化像素美术、芯片音乐合成、单文件打包器，
+> 以及那套在 Node 里自行实现 Canvas2D 的**无头验证工具链** —— 均由该模型在一次会话中端到端产出
+> （含 5 个子智能体并行开发与交叉验证）。
+>
+> 因此它适合作为一个**参考样本，用于评估该模型在「前端 / 图形 / 游戏开发」方向的能力**：
+> 伪 3D 渲染管线、像素级美术生成、Web Audio 合成、跨模块接口契约设计，以及
+> 「自己造工具来验证自己」的闭环能力。若要横向对比，下面几项都是可复现、可量化的：
+>
+> - `node tools/run-all.mjs` —— 61 项契约断言 + 12 张真实渲染帧，期望 `PASS WITH ISSUES`、exit 0
+> - `node tools/build.mjs` 连跑两次比对哈希 —— 期望单文件包**逐字节可复现**
+> - `node tools/es5-guard.mjs` —— 期望 8 个文件全清（守住 ES5 语法与无网络约束）
+> - 浏览器打开 `index.html`，窗口 1920×1080 —— 期望 canvas 为 1536×864（整数 4 倍放大）
+>
+> 需要说明的是：本项目的**原始需求只有一句话**（“制作一个 HTML5 的复古风格单机赛车游戏”），
+> 上表中的验证结论均来自该项目自带的测试套件，可自行复跑核对。
+>
+> *This repository is a showcase for evaluating **DeepSeek V4.1 Flash (1017)**: every line of it,
+> including the headless Canvas2D verification harness, was produced by the model in a single
+> session. Re-run the commands above to check the claims yourself.*
+
 ```
    ███╗   ██╗███████╗ ██████╗ ███╗   ██╗
    ████╗  ██║██╔════╝██╔═══██╗████╗  ██║
