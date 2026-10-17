@@ -18,10 +18,28 @@
 
 ---
 
+## 画面
+
+三个关卡各有独立的天空、地面、路肩与布景配色：
+
+| SUNSET STRIP | NEON NIGHT | SANDSTORM |
+|---|---|---|
+| ![SUNSET STRIP](screenshots/12-game-race-sunset.png) | ![NEON NIGHT](screenshots/14-game-race-night.png) | ![SANDSTORM](screenshots/15-game-race-desert.png) |
+
+| 标题页 | 发车倒计时 | GAME OVER |
+|---|---|---|
+| ![title](screenshots/10-game-title.png) | ![countdown](screenshots/11-game-countdown.png) | ![game over](screenshots/17-game-over.png) |
+
+真实浏览器中的成品页面（1920×1080 下自动整数放大到 4 倍，扫描线叠加在输出分辨率上）：
+
+![browser](screenshots/02-browser-1920x1080.png)
+
+---
+
 ## 快速开始
 
 **方式一（推荐，最简单）**：直接双击 **`neon-drift-86.html`**。
-单文件、约 230 KB、完全自包含，`file://` 协议下就能跑，没有任何依赖。
+单文件、约 240 KB、完全自包含，`file://` 协议下就能跑，没有任何依赖。
 
 **方式二（开发用，多文件）**：双击 **`index.html`**。
 它按固定顺序加载 `src/*.js`（经典 `<script>`，不用 ES module，所以 `file://` 也不会被 CORS 拦）。
